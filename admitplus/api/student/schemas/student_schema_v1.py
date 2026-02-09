@@ -1,0 +1,324 @@
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List, Union, Literal, Annotated
+from enum import Enum
+from datetime import datetime
+
+
+class StudentBasicInfo(BaseModel):
+    name: str
+    gender: Optional[str] = None
+    dob: Optional[str] = None  # or date
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+
+
+class StudentEducation(BaseModel):
+    current_school: Optional[str] = None
+    grade: Optional[str] = None
+    curriculum: Optional[str] = None
+    gpa: Optional[float] = None
+
+
+class StudentTestScores(BaseModel):
+    ielts: Optional[float] = None
+    toefl: Optional[float] = None
+    sat: Optional[int] = None
+
+
+class StudentCreateByAgencyRequest(BaseModel):
+    basic_info: StudentBasicInfo
+    education: Optional[StudentEducation] = None
+    test_scores: Optional[StudentTestScores] = None
+
+
+# ---------------- Enums ----------------
+
+
+class DegreeLevel(str, Enum):
+    """Degree level enumeration"""
+
+    bachelor = "bachelor"
+    master = "master"
+    phd = "phd"
+
+
+class StudentType(str, Enum):
+    """Student type enumeration"""
+
+    high_school = "high_school"
+    undergraduate = "undergraduate"
+    graduate = "graduate"
+    phd = "phd"
+
+
+# ---------------- Sub-models ----------------
+
+
+class LanguageTestScore(BaseModel):
+    """Language test scores (TOEFL, IELTS)"""
+
+    toefl: Optional[str] = Field(None, description="TOEFL score, e.g., 105")
+    ielts: Optional[str] = Field(None, description="IELTS score")
+
+
+class EducationRecord(BaseModel):
+    """Education history record"""
+
+    level: DegreeLevel = Field(..., description="Degree level of this education entry")
+    university: Optional[str] = Field(None, description="University name")
+    major: Optional[str] = Field(None, description="Major studied")
+    gpa: Optional[float] = Field(None, description="GPA score")
+
+
+# ---------------- Internal Profile Models ----------------
+
+
+class StudentProfileBase(BaseModel):
+    """Base students profile model for internal use"""
+
+    student_type: StudentType
+    gpa: Optional[float] = Field(None, description="GPA")
+    language: Optional[LanguageTestScore] = None
+    activities: Optional[List[str]] = Field(
+        default_factory=list, description="Clubs, competitions, sports, etc."
+    )
+    awards: Optional[List[str]] = Field(
+        default_factory=list, description="Academic or extracurricular awards"
+    )
+    volunteer: Optional[List[str]] = Field(
+        default_factory=list, description="Volunteer experiences"
+    )
+    research: Optional[List[str]] = Field(
+        default_factory=list, description="Research experiences or papers"
+    )
+    internship: Optional[List[str]] = Field(
+        default_factory=list, description="Internship experiences"
+    )
+    competitions: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Relevant academic or professional competitions",
+    )
+    budget: Optional[float] = Field(
+        None, description="Expected annual tuition budget in USD"
+    )
+    purpose: Optional[str] = Field(
+        None, description="Purpose for pursuing further education"
+    )
+    location_preference: Optional[str] = Field(
+        None, description="Preferred location or region for school"
+    )
+
+
+class HighSchoolStudentProfile(StudentProfileBase):
+    """High school students profile model for internal use"""
+
+    student_type: Literal[StudentType.high_school]
+    current_high_school: Optional[str] = Field(
+        None, description="Name of current high school"
+    )
+    curriculum_system: Optional[str] = Field(
+        None, description="Curriculum system for high school"
+    )
+    ap_courses: Optional[List[str]] = Field(
+        default_factory=list, description="AP or IB courses taken"
+    )
+    sat: Optional[str] = Field(None, description="SAT score")
+    act: Optional[str] = Field(None, description="ACT score")
+
+
+class UniversityStudentProfile(StudentProfileBase):
+    """University students profile model for internal use"""
+
+    student_type: Literal[StudentType.undergraduate]
+    current_university: Optional[str] = Field(
+        None, description="Name of current universities"
+    )
+    gre: Optional[str] = Field(None, description="GRE score (if applicable)")
+    education_history: Optional[List[EducationRecord]] = Field(
+        default_factory=list, description="List of past education (e.g., universities)"
+    )
+
+
+# ---------------- Union Discriminated Type ----------------
+
+StudentProfileUnion = Annotated[
+    Union[HighSchoolStudentProfile, UniversityStudentProfile],
+    Field(discriminator="student_type"),
+]
+
+
+# ---------------- API Request Models ----------------
+
+
+class HighSchoolStudentRequest(BaseModel):
+    """Request model for creating/updating high school students profile"""
+
+    student_id: Optional[str] = Field(
+        None, description="Student ID (generated by backend if not provided)"
+    )
+    student_type: Literal[StudentType.high_school]
+    gpa: Optional[float] = Field(None, description="GPA")
+    language: Optional[LanguageTestScore] = None
+    activities: Optional[List[str]] = Field(
+        default_factory=list, description="Clubs, competitions, sports, etc."
+    )
+    awards: Optional[List[str]] = Field(
+        default_factory=list, description="Academic or extracurricular awards"
+    )
+    volunteer: Optional[List[str]] = Field(
+        default_factory=list, description="Volunteer experiences"
+    )
+    research: Optional[List[str]] = Field(
+        default_factory=list, description="Research experiences or papers"
+    )
+    internship: Optional[List[str]] = Field(
+        default_factory=list, description="Internship experiences"
+    )
+    competitions: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Relevant academic or professional competitions",
+    )
+    budget: Optional[float] = Field(
+        None, description="Expected annual tuition budget in USD"
+    )
+    purpose: Optional[str] = Field(
+        None, description="Purpose for pursuing further education"
+    )
+    location_preference: Optional[str] = Field(
+        None, description="Preferred location or region for school"
+    )
+
+    # High school specific fields
+    current_high_school: Optional[str] = Field(
+        None, description="Name of current high school"
+    )
+    curriculum_system: Optional[str] = Field(
+        None, description="Curriculum system for high school"
+    )
+    ap_courses: Optional[List[str]] = Field(
+        default_factory=list, description="AP or IB courses taken"
+    )
+    sat: Optional[str] = Field(None, description="SAT score")
+    act: Optional[str] = Field(None, description="ACT score")
+
+
+class UniversityStudentRequest(BaseModel):
+    """Request model for creating/updating universities students profile"""
+
+    student_id: Optional[str] = Field(
+        None, description="Student ID (generated by backend if not provided)"
+    )
+    student_type: Literal[StudentType.undergraduate]
+    gpa: Optional[float] = Field(None, description="GPA")
+    language: Optional[LanguageTestScore] = None
+    activities: Optional[List[str]] = Field(
+        default_factory=list, description="Clubs, competitions, sports, etc."
+    )
+    awards: Optional[List[str]] = Field(
+        default_factory=list, description="Academic or extracurricular awards"
+    )
+    volunteer: Optional[List[str]] = Field(
+        default_factory=list, description="Volunteer experiences"
+    )
+    research: Optional[List[str]] = Field(
+        default_factory=list, description="Research experiences or papers"
+    )
+    internship: Optional[List[str]] = Field(
+        default_factory=list, description="Internship experiences"
+    )
+    competitions: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Relevant academic or professional competitions",
+    )
+    budget: Optional[float] = Field(
+        None, description="Expected annual tuition budget in USD"
+    )
+    purpose: Optional[str] = Field(
+        None, description="Purpose for pursuing further education"
+    )
+    location_preference: Optional[str] = Field(
+        None, description="Preferred location or region for school"
+    )
+
+    # University specific fields
+    current_university: Optional[str] = Field(
+        None, description="Name of current universities"
+    )
+    gre: Optional[str] = Field(None, description="GRE score (if applicable)")
+    education_history: Optional[List[EducationRecord]] = Field(
+        default_factory=list, description="List of past education (e.g., universities)"
+    )
+
+
+# Union type for request
+StudentProfileRequest = Annotated[
+    Union[HighSchoolStudentRequest, UniversityStudentRequest],
+    Field(discriminator="student_type"),
+]
+
+
+# ---------------- API Response Models ----------------
+
+
+class StudentProfileResponse(BaseModel):
+    """Unified response model for API responses that includes all possible fields"""
+
+    id: Optional[str] = Field(None, alias="_id")
+    student_id: str
+    student_type: StudentType
+    gpa: Optional[float] = Field(None, description="GPA")
+    language: Optional[LanguageTestScore] = None
+    activities: Optional[List[str]] = Field(
+        default_factory=list, description="Clubs, competitions, sports, etc."
+    )
+    awards: Optional[List[str]] = Field(
+        default_factory=list, description="Academic or extracurricular awards"
+    )
+    volunteer: Optional[List[str]] = Field(
+        default_factory=list, description="Volunteer experiences"
+    )
+    research: Optional[List[str]] = Field(
+        default_factory=list, description="Research experiences or papers"
+    )
+    internship: Optional[List[str]] = Field(
+        default_factory=list, description="Internship experiences"
+    )
+    competitions: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Relevant academic or professional competitions",
+    )
+    budget: Optional[float] = Field(
+        None, description="Expected annual tuition budget in USD"
+    )
+    purpose: Optional[str] = Field(
+        None, description="Purpose for pursuing further education"
+    )
+    location_preference: Optional[str] = Field(
+        None, description="Preferred location or region for school"
+    )
+
+    # High school specific fields (only present for high school students)
+    current_high_school: Optional[str] = Field(
+        None, description="Name of current high school"
+    )
+    curriculum_system: Optional[str] = Field(
+        None, description="Curriculum system for high school"
+    )
+    ap_courses: Optional[List[str]] = Field(
+        default_factory=list, description="AP or IB courses taken"
+    )
+    sat: Optional[str] = Field(None, description="SAT score")
+    act: Optional[str] = Field(None, description="ACT score")
+
+    # University specific fields (only present for universities students)
+    current_university: Optional[str] = Field(
+        None, description="Name of current universities"
+    )
+    gre: Optional[str] = Field(None, description="GRE score (if applicable)")
+    education_history: Optional[List[EducationRecord]] = Field(
+        default_factory=list, description="List of past education (e.g., universities)"
+    )
+
+    # Timestamps
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
